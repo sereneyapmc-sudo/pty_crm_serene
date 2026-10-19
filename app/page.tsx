@@ -1,69 +1,152 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
+import type { Listing, Viewing } from "./lib/types";
+
+function daysAgo(dateStr: string) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+export default function DashboardPage() {
+  const [todaysViewings, setTodaysViewings] = useState<Viewing[]>([]);
+  const [followUps, setFollowUps] = useState<Viewing[]>([]);
+  const [staleListings, setStaleListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+      const fourteenDaysAgo = new Date(
+        Date.now() - 14 * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const [todayRes, followUpRes, listingsRes] = await Promise.all([
+        supabase
+          .from("viewings")
+          .select("*, listings(*), leads(*)")
+          .eq("scheduled_date", today)
+          .order("scheduled_time"),
+        supabase
+          .from("viewings")
+          .select("*, listings(*), leads(*)")
+          .not("next_action", "is", null)
+          .lte("next_action_due", today)
+          .order("next_action_due"),
+        supabase
+          .from("listings")
+          .select("*")
+          .lt("last_activity_at", fourteenDaysAgo)
+          .in("status", ["active", "under_offer"])
+          .order("last_activity_at"),
+      ]);
+
+      if (todayRes.error) setError(todayRes.error.message);
+      else setTodaysViewings(todayRes.data ?? []);
+
+      if (followUpRes.error) setError(followUpRes.error.message);
+      else setFollowUps(followUpRes.data ?? []);
+
+      if (listingsRes.error) setError(listingsRes.error.message);
+      else setStaleListings(listingsRes.data ?? []);
+
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return <p className="text-gray-400 text-sm">Loading dashboard...</p>;
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-8">
+      <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2">
+          {error}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+
+      <section>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          Today&apos;s viewings ({todaysViewings.length})
+        </h2>
+        {todaysViewings.length === 0 ? (
+          <p className="text-sm text-gray-400">No viewings scheduled today.</p>
+        ) : (
+          <div className="space-y-2">
+            {todaysViewings.map((v) => (
+              <div
+                key={v.id}
+                className="bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between"
+              >
+                <span>
+                  <span className="font-medium">{v.scheduled_time}</span> —{" "}
+                  {v.listings?.address} with {v.leads?.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          Follow-ups due ({followUps.length})
+        </h2>
+        {followUps.length === 0 ? (
+          <p className="text-sm text-gray-400">No follow-ups due.</p>
+        ) : (
+          <div className="space-y-2">
+            {followUps.map((v) => (
+              <div
+                key={v.id}
+                className="bg-white border border-gray-200 rounded-lg p-3 text-sm"
+              >
+                <p>
+                  <span className="font-medium">{v.leads?.name}</span> —{" "}
+                  {v.next_action}
+                  {v.next_action_due && (
+                    <span className="text-red-600">
+                      {" "}
+                      (due {v.next_action_due})
+                    </span>
+                  )}
+                </p>
+                <p className="text-gray-500">{v.listings?.address}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          Listings with no activity in 14+ days ({staleListings.length})
+        </h2>
+        {staleListings.length === 0 ? (
+          <p className="text-sm text-gray-400">All listings are active.</p>
+        ) : (
+          <div className="space-y-2">
+            {staleListings.map((l) => (
+              <div
+                key={l.id}
+                className="bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between"
+              >
+                <span>{l.address}</span>
+                <span className="text-gray-500">
+                  {daysAgo(l.last_activity_at)} days since last activity
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
