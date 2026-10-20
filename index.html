@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PropAgent CRM</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="app-header">
+  <h1>PropAgent CRM</h1>
+  <nav aria-label="Primary">
+    <button type="button" class="nav-btn" data-route="dashboard" aria-current="page">Dashboard</button>
+    <button type="button" class="nav-btn" data-route="listings">Listings</button>
+    <button type="button" class="nav-btn" data-route="leads">Leads</button>
+    <button type="button" class="nav-btn" data-route="viewings">Viewings</button>
+    <button type="button" class="nav-btn" data-route="settings">Settings</button>
+  </nav>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<div id="dialog-root"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<template id="tpl-dashboard">
+  <section aria-labelledby="h-dashboard">
+    <h2 id="h-dashboard">Dashboard</h2>
+    <div class="dash-grid">
+      <article class="card">
+        <h3>Today's Viewings</h3>
+        <ul class="list-plain" data-slot="today-viewings"></ul>
+      </article>
+      <article class="card">
+        <h3>Due Follow-ups</h3>
+        <ul class="list-plain" data-slot="due-followups"></ul>
+      </article>
+      <article class="card">
+        <h3>Stale Listings</h3>
+        <p class="muted">Available 14+ days without update</p>
+        <ul class="list-plain" data-slot="stale-listings"></ul>
+      </article>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-listings">
+  <section aria-labelledby="h-listings">
+    <div class="section-head">
+      <h2 id="h-listings">Listings</h2>
+      <button type="button" class="btn btn-primary" data-action="new-listing">+ New Listing</button>
+    </div>
+    <div class="toolbar">
+      <label class="sr-only" for="listing-search">Search listings</label>
+      <input id="listing-search" type="search" placeholder="Search by title or address" data-filter="search" />
+      <label class="sr-only" for="listing-status-filter">Filter by status</label>
+      <select id="listing-status-filter" data-filter="status">
+        <option value="">All statuses</option>
+        <option value="Available">Available</option>
+        <option value="Under Offer">Under Offer</option>
+        <option value="Sold">Sold</option>
+        <option value="Rented">Rented</option>
+        <option value="Withdrawn">Withdrawn</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Title</th><th scope="col">Type</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Updated</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+        </thead>
+        <tbody data-slot="listing-rows"></tbody>
+      </table>
+    </div>
+    <p class="empty-state" data-slot="listing-empty" hidden>No listings match your search.</p>
+  </section>
+</template>
+
+<template id="tpl-leads">
+  <section aria-labelledby="h-leads">
+    <div class="section-head">
+      <h2 id="h-leads">Leads</h2>
+      <button type="button" class="btn btn-primary" data-action="new-lead">+ New Lead</button>
+    </div>
+    <div class="toolbar">
+      <label class="sr-only" for="lead-search">Search leads</label>
+      <input id="lead-search" type="search" placeholder="Search by name or phone" data-filter="search" />
+      <label class="sr-only" for="lead-status-filter">Filter by status</label>
+      <select id="lead-status-filter" data-filter="status">
+        <option value="">All statuses</option>
+        <option value="New">New</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Qualified">Qualified</option>
+        <option value="Negotiating">Negotiating</option>
+        <option value="Closed">Closed</option>
+        <option value="Not Interested">Not Interested</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Name</th><th scope="col">Interest</th><th scope="col">Budget</th><th scope="col">Status</th><th scope="col">Next Follow-up</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+        </thead>
+        <tbody data-slot="lead-rows"></tbody>
+      </table>
+    </div>
+    <p class="empty-state" data-slot="lead-empty" hidden>No leads match your search.</p>
+  </section>
+</template>
+
+<template id="tpl-viewings">
+  <section aria-labelledby="h-viewings">
+    <div class="section-head">
+      <h2 id="h-viewings">Viewings</h2>
+      <button type="button" class="btn btn-primary" data-action="new-viewing">+ Schedule Viewing</button>
+    </div>
+    <div class="toolbar">
+      <label class="sr-only" for="viewing-status-filter">Filter by status</label>
+      <select id="viewing-status-filter" data-filter="status">
+        <option value="">All statuses</option>
+        <option value="Scheduled">Scheduled</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">When</th><th scope="col">Listing</th><th scope="col">Lead</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+        </thead>
+        <tbody data-slot="viewing-rows"></tbody>
+      </table>
+    </div>
+    <p class="empty-state" data-slot="viewing-empty" hidden>No viewings match your filter.</p>
+  </section>
+</template>
+
+<template id="tpl-settings">
+  <section aria-labelledby="h-settings">
+    <h2 id="h-settings">Settings</h2>
+    <article class="card">
+      <h3>Backup</h3>
+      <p>Export all data to a JSON file, or import a previously exported file.</p>
+      <div class="btn-row">
+        <button type="button" class="btn" data-action="export-data">Export JSON</button>
+        <label class="btn" for="import-file">Import JSON</label>
+        <input id="import-file" type="file" accept="application/json" class="sr-only" />
+      </div>
+    </article>
+    <article class="card">
+      <h3>Demo Data</h3>
+      <p>Load sample listings, leads, and viewings, or clear everything.</p>
+      <div class="btn-row">
+        <button type="button" class="btn" data-action="load-demo">Load Demo Data</button>
+        <button type="button" class="btn btn-danger" data-action="clear-data">Clear All Data</button>
+      </div>
+    </article>
+  </section>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
